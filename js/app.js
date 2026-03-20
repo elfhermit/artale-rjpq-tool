@@ -28,6 +28,10 @@ class UILogger {
     entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-msg">${prefix} ${msg}</span>`;
 
     logBox.prepend(entry);
+    
+    // 更新標題列的預覽訊息
+    const preview = document.getElementById('log-latest-msg');
+    if (preview) preview.innerText = `│ ${prefix} ${msg}`;
   }
 }
 
@@ -117,6 +121,9 @@ class UIManager {
       btnCopy:     document.getElementById('btn-copy'),
       btnLeave:    document.getElementById('btn-leave'),
       logPanel:    document.getElementById('log-panel'),
+      logHeader:   document.getElementById('log-header'),
+      logContainer:document.getElementById('ui-log'),
+      logToggleIcon:document.getElementById('log-toggle-icon'),
       colorCircles: document.querySelectorAll('.color-circle')
     };
 
@@ -688,6 +695,19 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   ui.els.setSummary.addEventListener('click', () => ui.toggleSettings());
+
+  if (ui.els.logHeader) {
+    ui.els.logHeader.addEventListener('click', () => {
+      const isHidden = ui.els.logContainer.classList.contains('is-hidden');
+      if (isHidden) {
+        ui.els.logContainer.classList.remove('is-hidden');
+        ui.els.logToggleIcon.innerText = '▲';
+      } else {
+        ui.els.logContainer.classList.add('is-hidden');
+        ui.els.logToggleIcon.innerText = '▼';
+      }
+    });
+  }
 
   ui.els.btnSaveNick.addEventListener('click', () => {
     let val = ui.els.nickInput.value.trim();

@@ -128,10 +128,14 @@
 
     <!-- UI 日誌區域 -->
     <div class="card p-0 is-hidden" id="log-panel" style="margin-top: 4px;">
-      <div style="padding: 10px 16px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between;">
-        <div class="section-title" style="margin: 0;">📝 連線日誌 Tracker</div>
+      <div class="log-header" id="log-header">
+        <div class="section-title log-title">
+          📝 連線日誌 Tracker 
+          <span id="log-latest-msg" class="log-preview"></span>
+        </div>
+        <div class="summary-hint" id="log-toggle-icon">▼</div>
       </div>
-      <div id="ui-log" class="log-container">
+      <div id="ui-log" class="log-container is-hidden">
         <!-- 系統日誌列表 -->
       </div>
     </div>

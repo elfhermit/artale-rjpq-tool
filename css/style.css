@@ -537,3 +537,31 @@ body {
 .log-warn { color: var(--color-yellow); }
 .log-success { color: var(--color-green); }
 .log-info { color: var(--text-main); }
+
+/* === Log Header Accordion === */
+.log-header {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+.log-header:hover { background-color: rgba(255, 255, 255, 0.03); }
+.log-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% - 24px);
+}
+.log-preview {
+  font-weight: normal;
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
