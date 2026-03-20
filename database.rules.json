@@ -3,7 +3,31 @@
     "rooms": {
       "$roomId": {
         ".read": "auth != null",
-        ".write": "auth != null"
+        ".write": "auth != null && !data.exists() && newData.child('meta/hostUid').val() === auth.uid",
+        "meta": {
+          ".write": "auth != null && ((!data.exists() && newData.child('hostUid').val() === auth.uid) || data.child('hostUid').val() === auth.uid)",
+          ".validate": "!newData.exists() || (newData.hasChildren(['hostUid','hostNick','createdAt']) && newData.child('hostUid').isString() && newData.child('hostUid').val().length >= 20 && newData.child('hostUid').val().length <= 40 && newData.child('hostNick').isString() && newData.child('hostNick').val().length > 0 && newData.child('hostNick').val().length <= 10 && newData.child('createdAt').isNumber())"
+        },
+        "members": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid",
+            ".validate": "!newData.exists() || (newData.hasChildren(['uid','nick','color','isHost']) && newData.child('uid').isString() && newData.child('uid').val() === $uid && newData.child('nick').isString() && newData.child('nick').val().matches(/^[^<>]{1,10}$/) && (!newData.child('color').exists() || (newData.child('color').isString() && newData.child('color').val().matches(/^(red|blue|green|yellow)$/))) && newData.child('isHost').isBoolean() && ((!root.child('rooms/' + $roomId + '/meta/hostUid').exists() && newData.child('isHost').val() === true) || (root.child('rooms/' + $roomId + '/meta/hostUid').exists() && newData.child('isHost').val() === ($uid === root.child('rooms/' + $roomId + '/meta/hostUid').val()))))"
+          }
+        },
+        "colorMap": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('rooms/' + $roomId + '/members/' + auth.uid).exists()",
+            ".validate": "!newData.exists() || (newData.isString() && newData.val().matches(/^(red|blue|green|yellow)$/))"
+          }
+        },
+        "mapData": {
+          "$floor": {
+            "$platform": {
+              ".write": "auth != null && root.child('rooms/' + $roomId + '/members/' + auth.uid).exists() && (root.child('rooms/' + $roomId + '/meta/hostUid').val() === auth.uid || (newData.child('v').val() === 1 && newData.child('ownerUid').val() === auth.uid) || (newData.child('v').val() === 0 && data.child('ownerUid').val() === auth.uid))",
+              ".validate": "!newData.exists() || (newData.hasChildren(['v','owner','ownerUid','color']) && newData.child('v').isNumber() && (newData.child('v').val() === 0 || newData.child('v').val() === 1) && ((newData.child('v').val() === 0 && !newData.child('owner').exists() && !newData.child('ownerUid').exists() && !newData.child('color').exists()) || (newData.child('v').val() === 1 && newData.child('owner').isString() && newData.child('owner').val() === root.child('rooms/' + $roomId + '/members/' + newData.child('ownerUid').val() + '/nick').val() && newData.child('ownerUid').isString() && newData.child('ownerUid').val().length >= 20 && newData.child('ownerUid').val().length <= 40 && newData.child('color').isString() && newData.child('color').val().matches(/^(red|blue|green|yellow)$/))))"
+            }
+          }
+        }
       }
     },
     "presence": {

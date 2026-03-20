@@ -1,7 +1,7 @@
 // ============================================
 // Artale RJPQ 跳平台輔助 - Firebase 雲端同步版
 // ============================================
-import { db, auth, signInAnonymously, onAuthStateChanged, ref, push, get, set, update, onValue, onDisconnect, remove, child } from './firebase-config.js';
+import { db, auth, signInAnonymously, onAuthStateChanged, ref, push, get, set, onValue, onDisconnect, remove, child } from './firebase-config.js';
 
 // === 常數定義 ===
 const CONFIG = {
@@ -25,7 +25,18 @@ class UILogger {
 
     const entry = document.createElement('div');
     entry.className = `log-entry log-${type}`;
-    entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-msg">${prefix} ${msg}</span>`;
+
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'log-time';
+    timeSpan.innerText = `[${time}]`;
+
+    const msgSpan = document.createElement('span');
+    msgSpan.className = 'log-msg';
+    msgSpan.innerText = `${prefix} ${msg}`;
+
+    entry.appendChild(timeSpan);
+    entry.appendChild(document.createTextNode(' '));
+    entry.appendChild(msgSpan);
 
     logBox.prepend(entry);
     
@@ -68,16 +79,17 @@ class Toast {
 // === 全域狀態管理器 ===
 class AppState {
   constructor() {
+    this.myUid = '';
     this.myNick = '';
     this.myColor = null;
     this.isHost = false;
     this.fullMyId = ''; // 對應 Firebase Room ID
-    this.connections = {}; // { uid: { nick, color, isHost } }
-    this.colorMap = {}; 
+    this.connections = {}; // { uid: { uid, nick, color, isHost } }
+    this.colorMap = {}; // { uid: color }
     
     // 初始化空地圖資料
     this.mapData = Array(CONFIG.MAP_LAYERS).fill(null).map(() =>
-      Array(CONFIG.MAP_PLATFORMS).fill(null).map(() => ({ v: 0, owner: null, color: null }))
+      Array(CONFIG.MAP_PLATFORMS).fill(null).map(() => ({ v: 0, owner: null, ownerUid: null, color: null }))
     );
   }
   
@@ -176,18 +188,29 @@ class UIManager {
     const colorKey = state.myColor ? state.myColor : 'no-color';
     const colorName = state.myColor ? CONFIG.TEAM_COLORS[state.myColor].name : '未選色';
     
-    this.els.summaryInfo.innerHTML = `
-      <strong>${roomText}</strong> | 
-      <span class="summary-color-dot" style="background-color: var(--color-${colorKey});"></span>
-      ${state.myNick} (${colorName})
-    `;
+    this.els.summaryInfo.textContent = '';
+
+    const roomStrong = document.createElement('strong');
+    roomStrong.innerText = roomText;
+    const sep = document.createTextNode(' | ');
+
+    const dot = document.createElement('span');
+    dot.className = 'summary-color-dot';
+    dot.style.backgroundColor = `var(--color-${colorKey})`;
+
+    const nickText = document.createTextNode(` ${state.myNick} (${colorName})`);
+
+    this.els.summaryInfo.appendChild(roomStrong);
+    this.els.summaryInfo.appendChild(sep);
+    this.els.summaryInfo.appendChild(dot);
+    this.els.summaryInfo.appendChild(nickText);
   }
 
   resetColorButtons(state) {
     this.els.colorCircles.forEach(btn => btn.classList.remove('selected', 'taken'));
 
-    Object.entries(state.colorMap).forEach(([nick, color]) => {
-      if (nick !== state.myNick) {
+    Object.entries(state.colorMap).forEach(([uid, color]) => {
+      if (uid !== state.myUid) {
         const btn = document.querySelector(`.color-circle.${color}`);
         if (btn) btn.classList.add('taken');
       }
@@ -307,32 +330,36 @@ class MapController {
 
     const item = this.state.mapData[floorIndex][platformIndex];
     if (item.v === 1) {
-      if (item.owner === this.state.myNick || this.state.isHost) {
-        this.updateMapData(floorIndex, platformIndex, 0, null, null);
+      const isMine = item.ownerUid ? item.ownerUid === this.state.myUid : item.owner === this.state.myNick;
+      if (isMine || this.state.isHost) {
+        this.updateMapData(floorIndex, platformIndex, 0, null, null, null);
       } else {
         return Toast.warn(`無法覆蓋 ${item.owner} 的位置。`);
       }
     } else {
-      if (item.owner && item.owner !== this.state.myNick) return;
+      if (item.ownerUid && item.ownerUid !== this.state.myUid) return;
+      if (!item.ownerUid && item.owner && item.owner !== this.state.myNick) return;
       
       // 同層不可重複標記
       for (let i = 0; i < CONFIG.MAP_PLATFORMS; i++) {
-        if (this.state.mapData[floorIndex][i].owner === this.state.myNick) {
-          this.updateMapData(floorIndex, i, 0, null, null);
+        const rowItem = this.state.mapData[floorIndex][i];
+        const rowIsMine = rowItem.ownerUid ? rowItem.ownerUid === this.state.myUid : rowItem.owner === this.state.myNick;
+        if (rowIsMine) {
+          this.updateMapData(floorIndex, i, 0, null, null, null);
         }
       }
-      this.updateMapData(floorIndex, platformIndex, 1, this.state.myNick, this.state.myColor);
+      this.updateMapData(floorIndex, platformIndex, 1, this.state.myNick, this.state.myUid, this.state.myColor);
     }
   }
 
-  updateMapData(floorIndex, platformIndex, v, owner, color) {
-    this.state.mapData[floorIndex][platformIndex] = { v, owner, color };
+  updateMapData(floorIndex, platformIndex, v, owner, ownerUid, color) {
+    this.state.mapData[floorIndex][platformIndex] = { v, owner, ownerUid, color };
     this.ui.updatePlatformAppearance(floorIndex, platformIndex, this.state.mapData[floorIndex][platformIndex]);
     
     // 如果連接上了 Firebase，則即時寫入
     if (this.rm.roomRef) {
       const cellRef = child(this.rm.roomRef, `mapData/${floorIndex}/${platformIndex}`);
-      set(cellRef, { v, owner, color }).catch(e => UILogger.log(`同步節點失敗: ${e.message}`, 'error'));
+      set(cellRef, { v, owner, ownerUid, color }).catch(e => UILogger.log(`同步節點失敗: ${e.message}`, 'error'));
     }
   }
 
@@ -342,7 +369,7 @@ class MapController {
 
   clearLocal() {
     this.state.forEachPlatform((f, p, item) => {
-      item.v = 0; item.owner = null; item.color = null;
+      item.v = 0; item.owner = null; item.ownerUid = null; item.color = null;
       this.ui.updatePlatformAppearance(f, p, item);
       const el = document.getElementById(`p-${f}-${p}`);
       if (el) el.classList.remove('dead');
@@ -351,19 +378,16 @@ class MapController {
 
   resetAll() {
     if (!this.state.isHost) return;
-    this.clearLocal();
-    if (this.rm.roomRef) {
-      set(child(this.rm.roomRef, 'mapData'), this.state.mapData)
-        .then(() => Toast.success('已清空地圖標記並同步至雲端'))
-        .catch(e => UILogger.log(`清空同步失敗: ${e.message}`, 'error'));
-    }
+    this.state.forEachPlatform((f, p) => this.updateMapData(f, p, 0, null, null, null));
+    Toast.success('已清空地圖標記並同步至雲端');
   }
 
   resetSelf() {
     let hasChanges = false;
     this.state.forEachPlatform((f, p, item) => {
-      if (item.v === 1 && item.owner === this.state.myNick) {
-        this.updateMapData(f, p, 0, null, null);
+      const isMine = item.ownerUid ? item.ownerUid === this.state.myUid : item.owner === this.state.myNick;
+      if (item.v === 1 && isMine) {
+        this.updateMapData(f, p, 0, null, null, null);
         hasChanges = true;
       }
     });
@@ -373,6 +397,15 @@ class MapController {
     } else {
       Toast.info('沒有屬於你的標記。');
     }
+  }
+
+  removeUserMarkers(uid) {
+    this.state.forEachPlatform((f, p, item) => {
+      if (item.v === 1 && item.ownerUid === uid) {
+        this.state.mapData[f][p] = { v: 0, owner: null, ownerUid: null, color: null };
+        this.ui.updatePlatformAppearance(f, p, this.state.mapData[f][p]);
+      }
+    });
   }
 }
 
@@ -391,6 +424,12 @@ class FirebaseRoomManager {
 
   setMapController(mc) { this.mapCtrl = mc; }
 
+  resolveUidByNick(nick) {
+    if (!nick) return null;
+    const hit = Object.entries(this.state.connections).find(([, info]) => info?.nick === nick);
+    return hit ? hit[0] : null;
+  }
+
   initFirebase(onReady) {
     if (this.uid) return onReady();
     this.ui.setLoading(true, '連線至 Firebase Auth...');
@@ -400,6 +439,7 @@ class FirebaseRoomManager {
       onAuthStateChanged(auth, (user) => {
         if (user) {
           this.uid = user.uid;
+          this.state.myUid = user.uid;
           this.ui.setLoading(false);
           UILogger.log(`Firebase 驗證成功 (UID: ${this.uid.slice(0, 5)}...)`, 'success');
           onReady();
@@ -424,12 +464,12 @@ class FirebaseRoomManager {
       this.state.fullMyId = this.roomId;
       
       const payload = {
-        meta: { hostNick: this.state.myNick, createdAt: Date.now() },
+        meta: { hostUid: this.uid, hostNick: this.state.myNick, createdAt: Date.now() },
         members: {
-          [this.uid]: { nick: this.state.myNick, color: this.state.myColor || null, isHost: true }
+          [this.uid]: { uid: this.uid, nick: this.state.myNick, color: this.state.myColor || null, isHost: true }
         },
         mapData: this.state.mapData,
-        colorMap: this.state.myColor ? { [this.state.myNick]: this.state.myColor } : {}
+        colorMap: this.state.myColor ? { [this.uid]: this.state.myColor } : {}
       };
 
       try {
@@ -439,6 +479,7 @@ class FirebaseRoomManager {
         // 離線自動刪除成員
         const myMemberRef = child(this.roomRef, `members/${this.uid}`);
         onDisconnect(myMemberRef).remove();
+        onDisconnect(child(this.roomRef, `colorMap/${this.uid}`)).remove();
         
         this.setupSubscriptions();
         
@@ -504,22 +545,32 @@ class FirebaseRoomManager {
         this.state.connections = roomData.members || {};
         this.state.colorMap = roomData.colorMap || {};
         
-        const updates = {};
-        updates[`members/${this.uid}`] = { nick: this.state.myNick, color: this.state.myColor, isHost: false };
+        await set(child(this.roomRef, `members/${this.uid}`), {
+          uid: this.uid,
+          nick: this.state.myNick,
+          color: this.state.myColor,
+          isHost: false
+        });
         if (this.state.myColor) {
-          updates[`colorMap/${this.state.myNick}`] = this.state.myColor;
+          await set(child(this.roomRef, `colorMap/${this.uid}`), this.state.myColor);
         }
-
-        await update(this.roomRef, updates);
         
         const myMemberRef = child(this.roomRef, `members/${this.uid}`);
         onDisconnect(myMemberRef).remove();
+        onDisconnect(child(this.roomRef, `colorMap/${this.uid}`)).remove();
 
         this.setupSubscriptions();
         
         // 更新地圖本機狀態
         if (roomData.mapData) {
-          this.state.mapData = roomData.mapData;
+          this.state.mapData = roomData.mapData.map((floor) =>
+            floor.map((cell) => ({
+              v: cell?.v || 0,
+              owner: cell?.owner || null,
+              ownerUid: cell?.ownerUid || this.resolveUidByNick(cell?.owner),
+              color: cell?.color || null
+            }))
+          );
           this.state.forEachPlatform((f, p, item) => this.ui.updatePlatformAppearance(f, p, item));
         }
 
@@ -556,7 +607,7 @@ class FirebaseRoomManager {
         if (!membersObj[oldUid]) {
            const leftUser = this.state.connections[oldUid];
            UILogger.log(`成員離開: ${leftUser.nick}`, 'warn');
-           this.mapCtrl.removeUserMarkers(leftUser.nick);
+           this.mapCtrl.removeUserMarkers(oldUid);
         }
       });
 
@@ -575,10 +626,10 @@ class FirebaseRoomManager {
     // 監聽顏色對應表變更
     const colorMapUnsub = onValue(child(this.roomRef, 'colorMap'), (snapshot) => {
       this.state.colorMap = snapshot.val() || {};
-      if (this.state.myColor && this.state.colorMap[this.state.myNick] !== this.state.myColor) {
-        if (!this.state.colorMap[this.state.myNick]) {
+      if (this.state.myColor && this.state.colorMap[this.state.myUid] !== this.state.myColor) {
+        if (!this.state.colorMap[this.state.myUid]) {
            // 被別人清空了？重新宣告自己
-           update(child(this.roomRef, 'colorMap'), { [this.state.myNick]: this.state.myColor });
+           set(child(this.roomRef, `colorMap/${this.state.myUid}`), this.state.myColor);
         }
       }
       this.ui.resetColorButtons(this.state);
@@ -594,10 +645,16 @@ class FirebaseRoomManager {
         for (let p = 0; p < CONFIG.MAP_PLATFORMS; p++) {
           if (data[f] && data[f][p]) {
             const remoteItem = data[f][p];
+            const normalizedRemote = {
+              v: remoteItem?.v || 0,
+              owner: remoteItem?.owner || null,
+              ownerUid: remoteItem?.ownerUid || this.resolveUidByNick(remoteItem?.owner),
+              color: remoteItem?.color || null
+            };
             const localItem = this.state.mapData[f][p];
-            if (localItem.v !== remoteItem.v || localItem.owner !== remoteItem.owner) {
-              this.state.mapData[f][p] = remoteItem;
-              this.ui.updatePlatformAppearance(f, p, remoteItem);
+            if (localItem.v !== normalizedRemote.v || localItem.owner !== normalizedRemote.owner || localItem.ownerUid !== normalizedRemote.ownerUid || localItem.color !== normalizedRemote.color) {
+              this.state.mapData[f][p] = normalizedRemote;
+              this.ui.updatePlatformAppearance(f, p, normalizedRemote);
             }
           }
         }
@@ -618,30 +675,31 @@ class FirebaseRoomManager {
 
   handleColorSelect(colorCode) {
     const colorName = CONFIG.TEAM_COLORS[colorCode].name;
-    const takenBy = Object.entries(this.state.colorMap).find(([nick, c]) => c === colorCode && nick !== this.state.myNick);
+    const takenBy = Object.entries(this.state.colorMap).find(([uid, c]) => c === colorCode && uid !== this.state.myUid);
     
     if (takenBy) {
-      UILogger.log(`顏色衝突: ${takenBy[0]} 已經選擇了 ${colorName}`, 'warn');
-      return Toast.warn(`[${colorName}色] 已被 ${takenBy[0]} 選擇`);
+      const takenNick = this.state.connections[takenBy[0]]?.nick || '其他玩家';
+      UILogger.log(`顏色衝突: ${takenNick} 已經選擇了 ${colorName}`, 'warn');
+      return Toast.warn(`[${colorName}色] 已被 ${takenNick} 選擇`);
     }
 
     if (this.state.myColor === colorCode) {
       this.state.myColor = null;
-      delete this.state.colorMap[this.state.myNick];
+      delete this.state.colorMap[this.state.myUid];
       UILogger.log(`取消選擇顏色`, 'info');
       
       if (this.roomRef) {
-        remove(child(this.roomRef, `colorMap/${this.state.myNick}`));
+        remove(child(this.roomRef, `colorMap/${this.state.myUid}`));
         remove(child(this.roomRef, `members/${this.uid}/color`));
       }
     } else {
       this.state.myColor = colorCode;
-      this.state.colorMap[this.state.myNick] = colorCode;
+      this.state.colorMap[this.state.myUid] = colorCode;
       Toast.success(`已選擇 [${colorName}色]`);
       UILogger.log(`已選擇 ${colorName}色`, 'success');
       
       if (this.roomRef) {
-        set(child(this.roomRef, `colorMap/${this.state.myNick}`), colorCode);
+        set(child(this.roomRef, `colorMap/${this.state.myUid}`), colorCode);
         set(child(this.roomRef, `members/${this.uid}/color`), colorCode);
       }
     }
@@ -659,11 +717,14 @@ class FirebaseRoomManager {
     if (this.roomRef && !forced) {
        if (this.state.isHost) {
           UILogger.log('房主離開，銷毀房間...', 'warn');
-          remove(this.roomRef);
+         remove(child(this.roomRef, 'mapData'));
+         remove(child(this.roomRef, 'colorMap'));
+         remove(child(this.roomRef, 'members'));
+         remove(child(this.roomRef, 'meta'));
        } else {
           UILogger.log('離開房間...', 'info');
           remove(child(this.roomRef, `members/${this.uid}`));
-          remove(child(this.roomRef, `colorMap/${this.state.myNick}`));
+         remove(child(this.roomRef, `colorMap/${this.uid}`));
        }
     }
     
@@ -673,7 +734,7 @@ class FirebaseRoomManager {
     this.state.fullMyId = ''; 
     this.state.connections = {};
     this.state.colorMap = {}; 
-    if (this.state.myColor) this.state.colorMap[this.state.myNick] = this.state.myColor;
+    if (this.state.myColor && this.state.myUid) this.state.colorMap[this.state.myUid] = this.state.myColor;
     this.roomId = null;
     this.roomRef = null;
     

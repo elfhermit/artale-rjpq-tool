@@ -2,3 +2,9 @@
 
 *Test*.md
 *test*.md
+
+.env
+.env.*
+*.local
+serviceAccount*.json
+firebase-adminsdk*.json
