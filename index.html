@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Artale RJPQ 跳平台輔助 - 柔和深色與效能優化版">
+  <title>Artale RJPQ 跳平台輔助</title>
+  <link rel="stylesheet" href="css/style.css">
+  <!-- PeerJS for P2P -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+<body>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loading">
+    <div class="spinner"></div>
+    <span class="loading-msg" id="load-msg">連線中...</span>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Help Modal -->
+  <div class="modal-overlay" id="help-modal">
+    <div class="modal-content">
+      <h2 class="modal-title">📖 操作說明</h2>
+      <div class="modal-body">
+        <h4>🎮 基本流程</h4>
+        <ul>
+          <li>輸入暱稱 → 選擇隊伍顏色</li>
+          <li>房長「建立房間」或隊員「加入房間」</li>
+          <li>點擊平台以標記路線！</li>
+        </ul>
+        <h4>🖱️ 標記操作</h4>
+        <ul>
+          <li><strong>電腦</strong>：左鍵正確路徑 / 右鍵死路(僅自己可見)</li>
+          <li><strong>手機</strong>：點擊正確路徑 / 雙擊死路(僅自己可見)</li>
+          <li>再次點擊已標記的格子即可取消。</li>
+        </ul>
+        <h4>⚠️ 規則</h4>
+        <ul>
+          <li>每層每人限標一格。</li>
+          <li>不可覆蓋其他人已標記的位置。</li>
+        </ul>
+        <button class="btn primary w-full mt-4" id="btn-close-help">我知道了</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    
+    <!-- 頂部標題與說明 -->
+    <div class="header">
+      <h1 class="header-title">
+        Artale RJPQ 輔助
+        <span class="badge">組隊冒險</span>
+      </h1>
+      <button class="btn-icon" id="btn-open-help" title="幫助">?</button>
+    </div>
+
+    <!-- 設定卡片 (支援折疊) -->
+    <div class="card" id="settings-card">
+      
+      <!-- 折疊後的摘要列 (Accordion Header) -->
+      <div class="settings-summary" id="settings-summary">
+        <div class="summary-info" id="summary-info">
+          <!-- JS 注入摘要: 例如 房間 1234 | Neo (紅) -->
+        </div>
+        <div class="summary-hint">點擊展開</div>
+      </div>
+
+      <!-- 詳細設定內容 -->
+      <div class="settings-content" id="settings-content">
+        
+        <!-- 角色區塊 -->
+        <div>
+          <div class="section-title">👤 角色設定</div>
+          <div class="input-group">
+            <input type="text" class="input-field" id="nick-input" maxlength="10" placeholder="輸入暱稱...">
+            <button class="btn primary" id="btn-save-nick">確定</button>
+            <button class="btn is-hidden" id="btn-edit-nick">修改</button>
+          </div>
+          
+          <div class="color-picker is-hidden mt-3" id="color-selector">
+            <span class="text-sm text-muted">選擇隊伍：</span>
+            <button class="color-circle red" data-color="red"></button>
+            <button class="color-circle blue" data-color="blue"></button>
+            <button class="color-circle green" data-color="green"></button>
+            <button class="color-circle yellow" data-color="yellow"></button>
+          </div>
+          <div class="color-warning is-hidden mt-2" id="color-warning">
+            ⚠️ 請先選擇顏色
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- 房間控制區塊 -->
+        <div id="conn-panel">
+          <div class="section-title">📡 房間設定</div>
+          <div id="init-actions" class="is-hidden">
+            <button class="btn primary w-full mb-2" id="btn-host">建立新房間 (房首)</button>
+            <div class="input-group" id="join-row">
+              <input type="text" class="input-field" id="join-id" placeholder="貼上房號...">
+              <button class="btn" id="btn-join">加入</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 連線後控制 -->
+        <div id="connected-actions" class="is-hidden">
+          <div class="input-group">
+            <button class="btn" id="btn-copy">📋 邀請連結</button>
+            <button class="btn danger" id="btn-leave">離開房間</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- 成員列表 -->
+        <div>
+          <div class="section-title">👥 成員</div>
+          <div class="member-list" id="member-list">
+            <!-- JS 動態產生 -->
+          </div>
+        </div>
+
+      </div> <!-- end settings-content -->
+    </div> <!-- end card -->
+
+    <!-- 地圖操作區 -->
+    <div class="card p-0 map-area" id="map-grid">
+      <!-- JS 動態產生 10層 x 4格 -->
+    </div>
+
+    <!-- Footer -->
+    <div class="footer-tools">
+      <button class="btn danger is-hidden" id="btn-reset-all">🔄 清空標記</button>
+      <button class="btn" id="btn-reload">重新整理</button>
+    </div>
+
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

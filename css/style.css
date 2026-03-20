@@ -1,0 +1,518 @@
+/* ============================================
+   Artale RJPQ 跳平台輔助工具 - Soft Dark Mode
+   Performance & Comfort First
+   ============================================ */
+
+/* === Google Fonts === */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* === Design Tokens === */
+:root {
+  /* 背景與卡片 */
+  --bg-main: #18181b;       /* Zinc 900 */
+  --bg-card: #27272a;       /* Zinc 800 */
+  --bg-platform: #3f3f46;   /* Zinc 700 - 空平台 */
+  --bg-platform-hover: #52525b;
+
+  /* 文字 */
+  --text-main: #f4f4f5;     /* Zinc 50 */
+  --text-muted: #a1a1aa;    /* Zinc 400 */
+  --text-inverse: #ffffff;
+
+  /* 邊框 */
+  --border-light: #3f3f46;
+  --border-platform: #52525b; /* Zinc 600 */
+
+  /* 玩家四色 (高辨識度、低刺眼) */
+  --color-red: #ef4444;     /* Red 500 */
+  --color-blue: #3b82f6;    /* Blue 500 */
+  --color-green: #10b981;   /* Emerald 500 */
+  --color-yellow: #f59e0b;  /* Amber 500 */
+  --color-dead: #7f1d1d;    /* Red 900 - 死路標記 */
+
+  /* 圓角與過渡 */
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+  --trans-fast: 0.1s ease;
+  --trans-normal: 0.2s ease;
+}
+
+/* === Reset & Base === */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 12px;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+/* === Utility Classes === */
+.is-hidden { display: none !important; }
+.w-full { width: 100% !important; }
+.mt-2 { margin-top: 8px !important; }
+.mt-3 { margin-top: 12px !important; }
+.mt-4 { margin-top: 16px !important; }
+.mb-2 { margin-bottom: 8px !important; }
+.text-sm { font-size: 13px !important; }
+.text-muted { color: var(--text-muted) !important; }
+
+.divider {
+  height: 1px;
+  background-color: var(--border-light);
+  margin: 4px 0;
+}
+
+/* === 主容器 (方案A: 置中集中 max-w-md) === */
+.container {
+  width: 100%;
+  max-width: 448px; /* max-w-md */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* === 共用卡片結構 === */
+.card {
+  background-color: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  border: 1px solid var(--border-light);
+}
+
+.card.p-0 {
+  padding: 0;
+}
+
+/* === Header === */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.header-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 600;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-light);
+  padding: 2px 6px;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+}
+
+.btn-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--trans-fast);
+  font-weight: 600;
+}
+.btn-icon:hover { background: var(--bg-platform); color: var(--text-main); }
+.btn-icon:active { transform: scale(0.95); }
+
+/* === 設定區塊與折疊 (Accordion) === */
+.settings-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: var(--trans-normal);
+}
+
+.settings-summary {
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  background-color: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  transition: var(--trans-fast);
+}
+
+.settings-summary:active { transform: scale(0.98); }
+.settings-summary.visible { display: flex; }
+
+.summary-info {
+  font-size: 13px;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.summary-color-dot {
+  width: 12px; height: 12px; border-radius: var(--radius-full);
+}
+
+.summary-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* === 表單元件 === */
+.section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.input-field {
+  flex: 1;
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  outline: none;
+  font-family: inherit;
+}
+.input-field::placeholder { color: var(--text-muted); }
+.input-field:focus { border-color: var(--color-blue); }
+.input-field:disabled { opacity: 0.5; }
+
+/* 按鈕設計 */
+.btn {
+  padding: 10px 16px;
+  background-color: var(--bg-platform);
+  border: 1px solid var(--border-platform);
+  color: var(--text-main);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--trans-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+}
+
+.btn:hover:not(:disabled) { background-color: var(--bg-platform-hover); }
+.btn:active:not(:disabled) { transform: scale(0.95); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn.primary { background-color: var(--color-blue); border-color: var(--color-blue); color: white; }
+.btn.primary:hover:not(:disabled) { filter: brightness(1.1); }
+.btn.danger { color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); background-color: rgba(239, 68, 68, 0.1); }
+.btn.danger:hover:not(:disabled) { background-color: var(--color-red); color: white; }
+
+/* === 顏色選擇器 === */
+.color-picker {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.color-warning {
+  color: var(--color-red);
+  font-size: 12px;
+}
+
+.color-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: var(--trans-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.color-circle:hover:not(.taken) { transform: scale(1.1); }
+.color-circle:active:not(.taken) { transform: scale(0.9); }
+
+.color-circle.selected {
+  border-color: #ffffff;
+  transform: scale(1.15);
+}
+
+.color-circle.taken {
+  opacity: 0.2;
+  cursor: not-allowed;
+  transform: scale(0.9);
+}
+
+.color-circle.red { background-color: var(--color-red); }
+.color-circle.blue { background-color: var(--color-blue); }
+.color-circle.green { background-color: var(--color-green); }
+.color-circle.yellow { background-color: var(--color-yellow); }
+
+/* === 成員清單 (Pill Design) === */
+.member-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.member-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--bg-main);
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+}
+
+.member-pill::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+}
+.member-pill.color-red::before { background-color: var(--color-red); }
+.member-pill.color-blue::before { background-color: var(--color-blue); }
+.member-pill.color-green::before { background-color: var(--color-green); }
+.member-pill.color-yellow::before { background-color: var(--color-yellow); }
+.member-pill.no-color::before { background-color: var(--border-platform); }
+
+/* === 地圖區域 (CSS Grid) === */
+.map-area {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.map-floor {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.floor-label {
+  width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.grid-container {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+/* === 平台按鈕 === */
+.platform-btn {
+  appearance: none;
+  background-color: var(--bg-platform);
+  border: 1px solid var(--border-platform);
+  border-radius: var(--radius-md);
+  min-height: 44px; /* iOS/Android 觸控標準最小高度 */
+  aspect-ratio: 2 / 1;
+  color: var(--text-inverse);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.1s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 點擊回饋 (按壓凹陷) */
+.platform-btn:active {
+  transform: scale(0.92);
+}
+
+/* 標記狀態顏色切換 (使用純色) */
+.platform-btn.marked-red { background-color: var(--color-red); border-color: transparent; }
+.platform-btn.marked-blue { background-color: var(--color-blue); border-color: transparent; }
+.platform-btn.marked-green { background-color: var(--color-green); border-color: transparent; }
+.platform-btn.marked-yellow { background-color: var(--color-yellow); border-color: transparent; }
+
+/* 死路標記 */
+.platform-btn.dead {
+  background-color: var(--color-dead);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* === Modal === */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 50;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+
+.modal-overlay.visible { display: flex; }
+
+.modal-content {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  width: 100%;
+  max-width: 400px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 16px;
+}
+
+.modal-body {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.modal-body h4 {
+  color: var(--text-main);
+  margin-bottom: 6px;
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+.modal-body ul {
+  padding-left: 20px;
+  margin-bottom: 12px;
+}
+
+/* === Loading === */
+.loading-overlay {
+  position: fixed; inset: 0;
+  background-color: rgba(24, 24, 27, 0.9);
+  z-index: 100;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+}
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--border-light);
+  border-top-color: var(--color-blue);
+  border-radius: var(--radius-full);
+  animation: spin 1s linear infinite;
+}
+.loading-msg {
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 600;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* === Toast Notification === */
+.toast-container {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast {
+  background-color: var(--bg-card);
+  color: var(--text-main);
+  border: 1px solid var(--border-light);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast.toast-error {
+  border-left: 4px solid var(--color-red);
+}
+
+.toast.toast-success {
+  border-left: 4px solid var(--color-green);
+}
+
+.toast.toast-warn {
+  border-left: 4px solid var(--color-yellow);
+}
+
+.toast.toast-info {
+  border-left: 4px solid var(--color-blue);
+}
+
+/* === Footer Tools === */
+.footer-tools {
+  display: flex; gap: 8px;
+}
+.footer-tools .btn { flex: 1; }
