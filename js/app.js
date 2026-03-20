@@ -124,7 +124,13 @@ class UIManager {
       logHeader:   document.getElementById('log-header'),
       logContainer:document.getElementById('ui-log'),
       logToggleIcon:document.getElementById('log-toggle-icon'),
-      colorCircles: document.querySelectorAll('.color-circle')
+      colorCircles: document.querySelectorAll('.color-circle'),
+      charHeader:  document.getElementById('char-settings-header'),
+      charContent: document.getElementById('char-settings-content'),
+      charToggleIcon: document.getElementById('char-settings-toggle-icon'),
+      roomIdDisplay: document.getElementById('room-id-display'),
+      btnCopyCode: document.getElementById('btn-copy-code'),
+      btnResetSelf: document.getElementById('btn-reset-self')
     };
 
     this.isSettingsCollapsed = false;
@@ -352,6 +358,22 @@ class MapController {
         .catch(e => UILogger.log(`清空同步失敗: ${e.message}`, 'error'));
     }
   }
+
+  resetSelf() {
+    let hasChanges = false;
+    this.state.forEachPlatform((f, p, item) => {
+      if (item.v === 1 && item.owner === this.state.myNick) {
+        this.updateMapData(f, p, 0, null, null);
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges) {
+      Toast.success('已清除我的標記');
+    } else {
+      Toast.info('沒有屬於你的標記。');
+    }
+  }
 }
 
 
@@ -423,6 +445,8 @@ class FirebaseRoomManager {
         this.ui.els.connPanel.classList.add('is-hidden');
         this.ui.els.connActions.classList.remove('is-hidden');
         this.ui.els.btnReset.classList.remove('is-hidden');
+        this.ui.els.btnResetSelf.classList.remove('is-hidden');
+        if (this.ui.els.roomIdDisplay) this.ui.els.roomIdDisplay.value = this.roomId;
         this.ui.els.logPanel.classList.remove('is-hidden');
         
         window.location.hash = this.roomId;
@@ -503,6 +527,8 @@ class FirebaseRoomManager {
         
         this.ui.els.connPanel.classList.add('is-hidden');
         this.ui.els.connActions.classList.remove('is-hidden');
+        this.ui.els.btnResetSelf.classList.remove('is-hidden');
+        if (this.ui.els.roomIdDisplay) this.ui.els.roomIdDisplay.value = this.roomId;
         this.ui.els.logPanel.classList.remove('is-hidden');
         this.ui.els.joinInput.value = '';
         
@@ -657,6 +683,8 @@ class FirebaseRoomManager {
     this.ui.els.connPanel.classList.remove('is-hidden');
     this.ui.els.connActions.classList.add('is-hidden');
     this.ui.els.btnReset.classList.add('is-hidden');
+    if (this.ui.els.btnResetSelf) this.ui.els.btnResetSelf.classList.add('is-hidden');
+    if (this.ui.els.roomIdDisplay) this.ui.els.roomIdDisplay.value = '';
     this.ui.els.logPanel.classList.add('is-hidden');
     this.ui.els.memberList.innerHTML = '';
     
@@ -673,6 +701,14 @@ class FirebaseRoomManager {
       Toast.success('邀請連結已複製！');
       UILogger.log('邀請連結複製成功', 'info');
     }).catch(() => prompt('請手動複製：', url));
+  }
+
+  copyCode() {
+    if (!this.roomId) return;
+    navigator.clipboard.writeText(this.roomId).then(() => {
+      Toast.success('房間代碼已複製！');
+      UILogger.log('房間代碼複製成功', 'info');
+    }).catch(() => prompt('請手動複製代碼：', this.roomId));
   }
 }
 
@@ -705,6 +741,19 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         ui.els.logContainer.classList.add('is-hidden');
         ui.els.logToggleIcon.innerText = '▼';
+      }
+    });
+  }
+
+  if (ui.els.charHeader) {
+    ui.els.charHeader.addEventListener('click', () => {
+      const isHidden = ui.els.charContent.classList.contains('is-hidden');
+      if (isHidden) {
+        ui.els.charContent.classList.remove('is-hidden');
+        ui.els.charToggleIcon.innerText = '▼';
+      } else {
+        ui.els.charContent.classList.add('is-hidden');
+        ui.els.charToggleIcon.innerText = '▲';
       }
     });
   }
@@ -748,6 +797,7 @@ document.addEventListener('DOMContentLoaded', () => {
   ui.els.btnHost.addEventListener('click', () => rm.startHost());
   ui.els.btnJoin.addEventListener('click', () => rm.startJoin(ui.els.joinInput.value.trim()));
   ui.els.btnCopy.addEventListener('click', () => rm.copyInvite());
+  if (ui.els.btnCopyCode) ui.els.btnCopyCode.addEventListener('click', () => rm.copyCode());
   ui.els.btnLeave.addEventListener('click', () => {
     if (confirm('確定要離開房間嗎？')) rm.leaveRoom(false);
   });
@@ -755,6 +805,12 @@ document.addEventListener('DOMContentLoaded', () => {
   ui.els.btnReset.addEventListener('click', () => {
     if (confirm('確定清空所有標記？此動作將同步至所有成員。')) mapCtrl.resetAll();
   });
+  
+  if (ui.els.btnResetSelf) {
+    ui.els.btnResetSelf.addEventListener('click', () => {
+      if (confirm('確定清除自己所有標記？此動作不可逆。')) mapCtrl.resetSelf();
+    });
+  }
   
   ui.els.btnReload.addEventListener('click', () => location.reload());
 

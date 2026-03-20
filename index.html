@@ -71,23 +71,28 @@
       <div class="settings-content" id="settings-content">
         
         <!-- 角色區塊 -->
-        <div>
-          <div class="section-title">👤 角色設定</div>
-          <div class="input-group">
-            <input type="text" class="input-field" id="nick-input" maxlength="10" placeholder="輸入暱稱...">
-            <button class="btn primary" id="btn-save-nick">確定</button>
-            <button class="btn is-hidden" id="btn-edit-nick">修改</button>
+        <div id="character-settings-container">
+          <div class="section-title log-title" id="char-settings-header" style="cursor: pointer;">
+            👤 角色設定
+            <div class="summary-hint" id="char-settings-toggle-icon">▼</div>
           </div>
-          
-          <div class="color-picker is-hidden mt-3" id="color-selector">
-            <span class="text-sm text-muted">選擇隊伍：</span>
-            <button class="color-circle red" data-color="red"></button>
-            <button class="color-circle blue" data-color="blue"></button>
-            <button class="color-circle green" data-color="green"></button>
-            <button class="color-circle yellow" data-color="yellow"></button>
-          </div>
-          <div class="color-warning is-hidden mt-2" id="color-warning">
-            ⚠️ 請先選擇顏色
+          <div id="char-settings-content">
+            <div class="input-group">
+              <input type="text" class="input-field" id="nick-input" maxlength="10" placeholder="輸入暱稱...">
+              <button class="btn primary" id="btn-save-nick">確定</button>
+              <button class="btn is-hidden" id="btn-edit-nick">修改</button>
+            </div>
+            
+            <div class="color-picker is-hidden mt-3" id="color-selector">
+              <span class="text-sm text-muted">選擇隊伍：</span>
+              <button class="color-circle red" data-color="red"></button>
+              <button class="color-circle blue" data-color="blue"></button>
+              <button class="color-circle green" data-color="green"></button>
+              <button class="color-circle yellow" data-color="yellow"></button>
+            </div>
+            <div class="color-warning is-hidden mt-2" id="color-warning">
+              ⚠️ 請先選擇顏色
+            </div>
           </div>
         </div>
 
@@ -107,6 +112,10 @@
 
         <!-- 連線後控制 -->
         <div id="connected-actions" class="is-hidden">
+          <div class="input-group mb-2">
+            <input type="text" class="input-field" id="room-id-display" readonly placeholder="房間代碼..." style="text-align: center;">
+            <button class="btn" id="btn-copy-code" title="複製房間代碼">📋 複製代碼</button>
+          </div>
           <div class="input-group">
             <button class="btn" id="btn-copy">📋 邀請連結</button>
             <button class="btn danger" id="btn-leave">離開房間</button>
@@ -147,7 +156,8 @@
 
     <!-- Footer -->
     <div class="footer-tools">
-      <button class="btn danger is-hidden" id="btn-reset-all">🔄 清空地圖標記</button>
+      <button class="btn is-hidden" id="btn-reset-self" style="background-color: #f59e0b; color: #fff;">🔄 清除我的標記</button>
+      <button class="btn danger is-hidden" id="btn-reset-all">🔄 清空地圖</button>
       <button class="btn" id="btn-reload">重新整理</button>
     </div>
 
