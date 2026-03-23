@@ -5,7 +5,7 @@
         ".read": "auth != null",
         ".write": "auth != null && !data.exists() && newData.child('meta/hostUid').val() === auth.uid",
         "meta": {
-          ".write": "auth != null && ((!data.exists() && newData.child('hostUid').val() === auth.uid) || data.child('hostUid').val() === auth.uid)",
+          ".write": "auth != null && ((!data.exists() && newData.child('hostUid').val() === auth.uid) || data.child('hostUid').val() === auth.uid || root.child('rooms/' + $roomId + '/members/' + auth.uid).exists())",
           ".validate": "!newData.exists() || (newData.hasChildren(['hostUid','hostNick','createdAt']) && newData.child('hostUid').isString() && newData.child('hostUid').val().length >= 20 && newData.child('hostUid').val().length <= 40 && newData.child('hostNick').isString() && newData.child('hostNick').val().length > 0 && newData.child('hostNick').val().length <= 10 && newData.child('createdAt').isNumber())"
         },
         "members": {

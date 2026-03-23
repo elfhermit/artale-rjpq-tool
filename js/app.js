@@ -142,10 +142,13 @@ class UIManager {
       charToggleIcon: document.getElementById('char-settings-toggle-icon'),
       roomIdDisplay: document.getElementById('room-id-display'),
       btnCopyCode: document.getElementById('btn-copy-code'),
-      btnResetSelf: document.getElementById('btn-reset-self')
+      btnResetSelf: document.getElementById('btn-reset-self'),
+      jumpSeq:     document.getElementById('jump-sequence'),
+      btnCopyJump: document.getElementById('btn-copy-jump')
     };
 
     this.isSettingsCollapsed = false;
+    this.nickWarnShown = false;
   }
 
   setLoading(show, msg = '處理中...') {
@@ -361,6 +364,7 @@ class MapController {
       const cellRef = child(this.rm.roomRef, `mapData/${floorIndex}/${platformIndex}`);
       set(cellRef, { v, owner, ownerUid, color }).catch(e => UILogger.log(`同步節點失敗: ${e.message}`, 'error'));
     }
+    this.updateJumpSequence();
   }
 
   handleRightClick(floorIndex, platformIndex) {
@@ -407,6 +411,46 @@ class MapController {
       }
     });
   }
+
+  updateJumpSequence() {
+    let seq = [];
+    let count = 0;
+    for (let f = 9; f >= 0; f--) {
+      let marked = '?';
+      for (let p = 0; p < CONFIG.MAP_PLATFORMS; p++) {
+        const item = this.state.mapData[f][p];
+        const isMine = item.ownerUid ? item.ownerUid === this.state.myUid : item.owner === this.state.myNick;
+        if (item.v === 1 && isMine) {
+          marked = p + 1;
+          count++;
+          break;
+        }
+      }
+      seq.push(marked);
+    }
+    if (this.ui.els.jumpSeq) {
+      const firstHalf = seq.slice(0, 5).join('');
+      const secondHalf = seq.slice(5, 10).join('');
+      this.ui.els.jumpSeq.value = `${firstHalf} ${secondHalf}`;
+    }
+
+    if (count === 10) {
+      if (!this.eggShown) {
+        const sum = seq.reduce((a, b) => a + Number(b), 0);
+        const avg = sum / 10;
+        let msg = '';
+        if (avg < 2) msg = 'You are so lucky!';
+        else if (avg >= 2 && avg <= 3.5) msg = '恭喜完成!';
+        else if (avg > 3.5) msg = '挖~你是天選之人!';
+        
+        Toast.info(`平均: ${avg.toFixed(1)} - ${msg}`, 4000);
+        UILogger.log(`觸發 10 層滿層彩蛋: 平均 ${avg.toFixed(1)}`, 'info');
+        this.eggShown = true;
+      }
+    } else {
+      this.eggShown = false;
+    }
+  }
 }
 
 
@@ -420,6 +464,23 @@ class FirebaseRoomManager {
     this.roomId = null;
     this.roomRef = null;
     this.unsubscribes = []; // For cleanup listener
+    
+    this.idleTimer = null;
+    this.resetIdleTimer = this.resetIdleTimer.bind(this);
+    window.addEventListener('mousemove', this.resetIdleTimer, {passive: true});
+    window.addEventListener('touchstart', this.resetIdleTimer, {passive: true});
+    window.addEventListener('keydown', this.resetIdleTimer, {passive: true});
+  }
+
+  resetIdleTimer() {
+    clearTimeout(this.idleTimer);
+    this.idleTimer = setTimeout(() => {
+       if (this.roomId) {
+          Toast.warn('因閒置超過 30 分鐘，已自動斷線釋放連線。', 6000);
+          UILogger.log('閒置超時，自動斷開房間連線', 'warn');
+          this.leaveRoom();
+       }
+    }, 30 * 60 * 1000);
   }
 
   setMapController(mc) { this.mapCtrl = mc; }
@@ -457,8 +518,14 @@ class FirebaseRoomManager {
       this.ui.setLoading(true, '建立房間中...');
       UILogger.log('正在 RTDB 建立房間...', 'info');
       
-      const newRoomRef = push(ref(db, 'rooms'));
-      this.roomId = newRoomRef.key;
+      let newRoomId, roomSnap;
+      do {
+        newRoomId = Math.floor(1000 + Math.random() * 9000).toString();
+        roomSnap = await get(child(ref(db, 'rooms'), newRoomId));
+      } while (roomSnap.exists());
+
+      const newRoomRef = child(ref(db, 'rooms'), newRoomId);
+      this.roomId = newRoomId;
       this.roomRef = newRoomRef;
       this.state.isHost = true;
       this.state.fullMyId = this.roomId;
@@ -620,6 +687,26 @@ class FirebaseRoomManager {
 
       this.state.connections = membersObj;
       this.ui.renderMemberTags(membersObj, this.state.myNick, this.state.isHost);
+
+      const memberCount = Object.keys(membersObj).length;
+      if (memberCount === 1) {
+         onDisconnect(this.roomRef).remove();
+      } else {
+         onDisconnect(this.roomRef).cancel();
+      }
+
+      const hasHost = Object.values(membersObj).some(m => m.isHost);
+      if (!hasHost && membersObj[this.uid]) {
+         const sortedUids = Object.keys(membersObj).sort();
+         if (sortedUids[0] === this.uid) {
+            this.state.isHost = true;
+            set(child(this.roomRef, `members/${this.uid}/isHost`), true);
+            set(child(this.roomRef, 'meta/hostUid'), this.uid);
+            set(child(this.roomRef, 'meta/hostNick'), this.state.myNick);
+            Toast.info("你已自動接管成為新房主！");
+            UILogger.log("自動接管房主權限", "success");
+         }
+      }
     });
     this.unsubscribes.push(membersUnsub);
 
@@ -659,6 +746,7 @@ class FirebaseRoomManager {
           }
         }
       }
+      this.mapCtrl.updateJumpSequence();
     });
     this.unsubscribes.push(mapDataUnsub);
 
@@ -715,17 +803,16 @@ class FirebaseRoomManager {
     }
     
     if (this.roomRef && !forced) {
-       if (this.state.isHost) {
-          UILogger.log('房主離開，銷毀房間...', 'warn');
-         remove(child(this.roomRef, 'mapData'));
-         remove(child(this.roomRef, 'colorMap'));
-         remove(child(this.roomRef, 'members'));
-         remove(child(this.roomRef, 'meta'));
+       const memberCount = Object.keys(this.state.connections).length;
+       if (memberCount <= 1) {
+          UILogger.log('房間淨空，銷毀房間...', 'warn');
+          remove(this.roomRef);
        } else {
           UILogger.log('離開房間...', 'info');
           remove(child(this.roomRef, `members/${this.uid}`));
-         remove(child(this.roomRef, `colorMap/${this.uid}`));
+          remove(child(this.roomRef, `colorMap/${this.uid}`));
        }
+       onDisconnect(this.roomRef).cancel();
     }
     
     // onDisconnect cleanup - we don't need to explicitly cancel unless we want to, but removing from DB does it.
@@ -785,6 +872,17 @@ document.addEventListener('DOMContentLoaded', () => {
   mapCtrl.renderGrid();
 
   // 綁定 DOM 事件
+  ui.els.nickInput.addEventListener('input', (e) => {
+    if (e.target.value.length >= 10) {
+      if (!ui.nickWarnShown) {
+        Toast.warn('角色暱稱最多只能輸入 10 個字元！');
+        ui.nickWarnShown = true;
+      }
+    } else {
+      ui.nickWarnShown = false;
+    }
+  });
+
   ui.els.btnOpenHelp.addEventListener('click', () => ui.els.helpModal.classList.add('visible'));
   ui.els.btnCloseHelp.addEventListener('click', () => ui.els.helpModal.classList.remove('visible'));
   ui.els.helpModal.addEventListener('click', (e) => {
@@ -874,6 +972,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   ui.els.btnReload.addEventListener('click', () => location.reload());
+
+  if (ui.els.btnCopyJump) {
+    ui.els.btnCopyJump.addEventListener('click', () => {
+      const val = ui.els.jumpSeq.value.trim();
+      if (!val) return;
+      navigator.clipboard.writeText(val).then(() => {
+        Toast.success('路線已複製！');
+      }).catch(() => prompt('請手動複製：', val));
+    });
+  }
 
   // 網址 Hash 初始化
   const initialHash = window.location.hash.substring(1);

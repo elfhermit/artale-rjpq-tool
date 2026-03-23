@@ -147,6 +147,11 @@
       <div id="ui-log" class="log-container is-hidden">
         <!-- 系統日誌列表 -->
       </div>
+      <div class="jump-tracker" style="padding: 12px 16px; border-top: 1px solid var(--border-light); background-color: var(--bg-card); display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+        <span style="font-size: 13px; color: var(--text-main); white-space: nowrap; font-weight: 500;">📝 你的起跳路線 (L1~L10)：</span>
+        <input type="text" id="jump-sequence" class="input-field" readonly placeholder="尚無紀錄..." style="flex: 1; text-align: center; font-family: monospace; letter-spacing: 2px; min-width: 120px; padding: 8px;">
+        <button class="btn" id="btn-copy-jump" style="padding: 8px 12px; font-size: 12px; white-space: nowrap;">📋 複製</button>
+      </div>
     </div>
 
     <!-- 地圖操作區 -->
@@ -156,9 +161,13 @@
 
     <!-- Footer -->
     <div class="footer-tools">
-      <button class="btn is-hidden" id="btn-reset-self" style="background-color: #f59e0b; color: #fff;">🔄 清除我的標記</button>
+      <button class="btn is-hidden" id="btn-reset-self" style="background-color: #d97706; color: #fff; border-color: #d97706;">🔄 清除我的標記</button>
       <button class="btn danger is-hidden" id="btn-reset-all">🔄 清空地圖</button>
       <button class="btn" id="btn-reload">重新整理</button>
+    </div>
+
+    <div class="footer-credits" style="text-align: center; color: #a1a1aa; font-size: 12px; margin-top: 20px; padding-bottom: 20px;">
+      網站為 8Lien 公會製作
     </div>
 
   </div>
