@@ -288,7 +288,7 @@ class MapController {
 
       const label = document.createElement('div');
       label.className = 'floor-label';
-      label.innerText = `L${CONFIG.MAP_LAYERS - floorIndex}`;
+      label.innerText = `${CONFIG.MAP_LAYERS - floorIndex}F`;
       floor.appendChild(label);
 
       const platforms = document.createElement('div');
