@@ -328,13 +328,14 @@ body {
 }
 
 .floor-label {
-  width: 24px;
+  width: 28px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--text-muted);
+  color: var(--text-main);
+  text-shadow: 0 0 4px rgba(0,0,0,0.5);
 }
 
 .grid-container {
@@ -357,7 +358,7 @@ body {
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  transition: background-color 0.1s, transform 0.1s;
+  transition: background-color 0.1s, transform 0.1s, filter 0.2s;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -380,6 +381,13 @@ body {
 .platform-btn.marked-blue { background-color: var(--color-blue); border-color: transparent; }
 .platform-btn.marked-green { background-color: var(--color-green); border-color: transparent; }
 .platform-btn.marked-yellow { background-color: var(--color-yellow); border-color: transparent; }
+
+/* 他人標記顏色變暗 */
+.platform-btn.marked-other {
+  filter: brightness(0.4) saturate(0.6);
+  opacity: 0.8;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
 
 /* 死路標記 */
 .platform-btn.dead {

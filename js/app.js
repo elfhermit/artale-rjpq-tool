@@ -244,13 +244,20 @@ class UIManager {
     });
   }
 
-  updatePlatformAppearance(floorIndex, platformIndex, item) {
+  updatePlatformAppearance(floorIndex, platformIndex, item, myUid, myNick) {
     const el = document.getElementById(`p-${floorIndex}-${platformIndex}`);
     if (!el) return;
-    el.classList.remove('marked-red', 'marked-blue', 'marked-green', 'marked-yellow', 'dead');
+    el.classList.remove('marked-red', 'marked-blue', 'marked-green', 'marked-yellow', 'marked-other', 'dead');
     
     if (item.v === 1 && item.color) {
       el.classList.add(`marked-${item.color}`);
+      
+      // 判斷是否為他人標記
+      const isMine = item.ownerUid ? item.ownerUid === myUid : item.owner === myNick;
+      if (!isMine) {
+        el.classList.add('marked-other');
+      }
+      
       el.innerText = item.owner || '';
     } else {
       el.innerText = '';
@@ -357,7 +364,7 @@ class MapController {
 
   updateMapData(floorIndex, platformIndex, v, owner, ownerUid, color) {
     this.state.mapData[floorIndex][platformIndex] = { v, owner, ownerUid, color };
-    this.ui.updatePlatformAppearance(floorIndex, platformIndex, this.state.mapData[floorIndex][platformIndex]);
+    this.ui.updatePlatformAppearance(floorIndex, platformIndex, this.state.mapData[floorIndex][platformIndex], this.state.myUid, this.state.myNick);
     
     // 如果連接上了 Firebase，則即時寫入
     if (this.rm.roomRef) {
@@ -374,7 +381,7 @@ class MapController {
   clearLocal() {
     this.state.forEachPlatform((f, p, item) => {
       item.v = 0; item.owner = null; item.ownerUid = null; item.color = null;
-      this.ui.updatePlatformAppearance(f, p, item);
+      this.ui.updatePlatformAppearance(f, p, item, this.state.myUid, this.state.myNick);
       const el = document.getElementById(`p-${f}-${p}`);
       if (el) el.classList.remove('dead');
     });
@@ -407,7 +414,7 @@ class MapController {
     this.state.forEachPlatform((f, p, item) => {
       if (item.v === 1 && item.ownerUid === uid) {
         this.state.mapData[f][p] = { v: 0, owner: null, ownerUid: null, color: null };
-        this.ui.updatePlatformAppearance(f, p, this.state.mapData[f][p]);
+        this.ui.updatePlatformAppearance(f, p, this.state.mapData[f][p], this.state.myUid, this.state.myNick);
       }
     });
   }
@@ -638,7 +645,7 @@ class FirebaseRoomManager {
               color: cell?.color || null
             }))
           );
-          this.state.forEachPlatform((f, p, item) => this.ui.updatePlatformAppearance(f, p, item));
+          this.state.forEachPlatform((f, p, item) => this.ui.updatePlatformAppearance(f, p, item, this.state.myUid, this.state.myNick));
         }
 
         this.ui.resetColorButtons(this.state);
@@ -741,7 +748,7 @@ class FirebaseRoomManager {
             const localItem = this.state.mapData[f][p];
             if (localItem.v !== normalizedRemote.v || localItem.owner !== normalizedRemote.owner || localItem.ownerUid !== normalizedRemote.ownerUid || localItem.color !== normalizedRemote.color) {
               this.state.mapData[f][p] = normalizedRemote;
-              this.ui.updatePlatformAppearance(f, p, normalizedRemote);
+              this.ui.updatePlatformAppearance(f, p, normalizedRemote, this.state.myUid, this.state.myNick);
             }
           }
         }
